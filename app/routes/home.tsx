@@ -40,7 +40,14 @@ export default function Home() {
       try {
         const items = (await kv.list("resume:*", true)) as KVItem[] | undefined;
         const parsedResumes =
-          items?.map((item) => JSON.parse(item.value) as Resume) ?? [];
+          items
+            ?.map((item) => JSON.parse(item.value) as Resume)
+            .filter(
+              (resume) =>
+                resume.feedback &&
+                typeof resume.feedback === "object" &&
+                "overallScore" in resume.feedback
+            ) ?? [];
 
         console.log("Fetched resumes", parsedResumes);
         if (isMounted) setResumes(parsedResumes);

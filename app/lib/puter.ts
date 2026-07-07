@@ -99,6 +99,22 @@ interface PuterStore {
 const getPuter = (): typeof window.puter | null =>
     typeof window !== "undefined" && window.puter ? window.puter : null;
 
+const buildFeedbackMessages = (path: string, message: string): ChatMessage[] => [
+    {
+        role: "user",
+        content: [
+            {
+                type: "file",
+                puter_path: path,
+            },
+            {
+                type: "text",
+                text: message,
+            },
+        ],
+    },
+];
+
 export const usePuterStore = create<PuterStore>((set, get) => {
     const setError = (msg: string) => {
         set({
@@ -334,24 +350,16 @@ export const usePuterStore = create<PuterStore>((set, get) => {
             return;
         }
 
-        return puter.ai.chat(
-            [
-                {
-                    role: "user",
-                    content: [
-                        {
-                            type: "file",
-                            puter_path: path,
-                        },
-                        {
-                            type: "text",
-                            text: message,
-                        },
-                    ],
-                },
-            ],
-            { model: "claude-sonnet-4" }
-        ) as Promise<AIResponse | undefined>;
+        const messages = buildFeedbackMessages(path, message);
+
+        try {
+            return (await puter.ai.chat(messages, { model: "claude-sonnet-4" })) as
+                AIResponse | undefined
+            ;
+        } catch (err) {
+            console.warn("Claude model failed, retrying with Puter default model", err);
+            return (await puter.ai.chat(messages)) as AIResponse | undefined;
+        }
     };
 
     const img2txt = async (image: string | File | Blob, testMode?: boolean) => {
